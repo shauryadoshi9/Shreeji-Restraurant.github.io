@@ -1,0 +1,151 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Our Menu | Shreeji Restaurant</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+    <nav>
+        <div class="container">
+            <a href="index.html" class="logo">Shreeji</a>
+            <ul class="nav-links">
+                <li><a href="index.html">Home</a></li>
+                <li><a href="selection.html">Back to Selection</a></li>
+                <li><a href="cart.html">My Cart</a></li>
+            </ul>
+            <a href="cart.html" class="cart-btn-link">
+                <i class="fas fa-shopping-cart"></i>
+                <span class="cart-counter" id="cartCounter">0</span>
+            </a>
+        </div>
+    </nav>
+
+    <main class="container">
+        <section class="menu-section">
+            <div style="display: flex; justify-content: space-between; align-items: flex-end; margin-bottom: 20px; border-bottom: 1px solid var(--glass-border); padding-bottom: 20px;">
+                <div>
+                    <h2 style="font-size: 36px; color: var(--primary-color);">Our Menu</h2>
+                    <div id="filterLabel" style="font-weight: 600; text-transform: uppercase; color: var(--text-muted); margin-top: 5px;">Mode: All</div>
+                </div>
+                <div class="view-controls">
+                    <button class="toggle-btn active" id="gridMode" title="Grid View"><i class="fas fa-th-large"></i></button>
+                    <button class="toggle-btn" id="listMode" title="List View"><i class="fas fa-list"></i></button>
+                </div>
+            </div>
+
+            <!-- Horizontal Category Navigation -->
+            <div class="category-container" id="categoryBar">
+                <button class="cat-btn active" data-cat="all">All Items</button>
+                <button class="cat-btn" data-cat="Starters">Starters</button>
+                <button class="cat-btn" data-cat="Soups">Soups</button>
+                <button class="cat-btn" data-cat="Curry">Curry</button>
+                <button class="cat-btn" data-cat="Rice">Rice & Biryani</button>
+                <button class="cat-btn" data-cat="Chappati">Chappati / Breads</button>
+                <button class="cat-btn" data-cat="Desserts">Desserts</button>
+            </div>
+            
+            <div class="menu-grid" id="menuGrid">
+                <!-- Items injected by script -->
+            </div>
+        </section>
+    </main>
+
+    <script src="common.js"></script>
+    <script>
+        let currentCategory = 'all';
+        let currentView = 'grid'; // 'grid' or 'list'
+
+        document.addEventListener('DOMContentLoaded', () => {
+            const dietPref = PreferenceManager.getPreference();
+            const label = document.getElementById('filterLabel');
+            label.innerText = `Mode: ${dietPref === 'all' ? 'Diverse' : (dietPref === 'veg' ? 'Pure Veg 🌱' : 'Non-Veg 🍗')}`;
+            
+            renderMenu();
+
+            // Category Bar Logic
+            const catBtns = document.querySelectorAll('.cat-btn');
+            catBtns.forEach(btn => {
+                btn.addEventListener('click', () => {
+                    catBtns.forEach(b => b.classList.remove('active'));
+                    btn.classList.add('active');
+                    currentCategory = btn.getAttribute('data-cat');
+                    renderMenu();
+                });
+            });
+
+            // View Toggle Logic
+            document.getElementById('gridMode').addEventListener('click', (e) => {
+                document.getElementById('listMode').classList.remove('active');
+                e.currentTarget.classList.add('active');
+                document.getElementById('menuGrid').classList.remove('list-view');
+                currentView = 'grid';
+            });
+
+            document.getElementById('listMode').addEventListener('click', (e) => {
+                document.getElementById('gridMode').classList.remove('active');
+                e.currentTarget.classList.add('active');
+                document.getElementById('menuGrid').classList.add('list-view');
+                currentView = 'list';
+            });
+        });
+
+        function renderMenu() {
+            const dietPref = PreferenceManager.getPreference();
+            const grid = document.getElementById('menuGrid');
+            grid.innerHTML = '';
+
+            // Double filter: Diet + Category
+            const filtered = menuItems.filter(item => {
+                const matchesDiet = dietPref === 'all' || item.type === dietPref;
+                const matchesCat = currentCategory === 'all' || item.category === currentCategory;
+                return matchesDiet && matchesCat;
+            });
+
+            if (filtered.length === 0) {
+                grid.innerHTML = `<div style="grid-column: 1/-1; text-align: center; padding: 50px; color: var(--text-muted)">No items found in this category.</div>`;
+                return;
+            }
+
+            filtered.forEach(item => {
+                const card = document.createElement('div');
+                card.className = 'food-card';
+                card.innerHTML = `
+                    <div style="position: relative;" class="food-img-wrapper">
+                        <img src="${item.image}" alt="${item.name}" class="food-img">
+                        <span style="position: absolute; top: 10px; right: 10px; background: rgba(0,0,0,0.7); padding: 5px 10px; border-radius: 5px; font-size: 11px;">${item.category}</span>
+                    </div>
+                    <div class="food-info">
+                        <div class="food-header">
+                            <h3 class="food-name">${item.name}</h3>
+                            <span class="price">₹${item.price}</span>
+                        </div>
+                        <div class="food-meta">
+                            <p class="food-type ${item.type}">${item.type === 'veg' ? '🌱 Veg' : '🍗 Non-Veg'}</p>
+                            <button class="btn btn-outline" onclick="addToCartHandler(${JSON.stringify(item).replace(/"/g, '&quot;')})">Add to Order</button>
+                        </div>
+                    </div>
+                `;
+                grid.appendChild(card);
+            });
+        }
+
+        function addToCartHandler(item) {
+            CartManager.addToCart(item);
+            const btn = event.target;
+            const originalText = btn.innerText;
+            btn.innerText = "Added ✓";
+            btn.style.borderColor = "var(--veg-color)";
+            btn.style.color = "var(--veg-color)";
+            setTimeout(() => {
+                btn.innerText = originalText;
+                btn.style.borderColor = "var(--primary-color)";
+                btn.style.color = "var(--primary-color)";
+            }, 1000);
+        }
+    </script>
+</body>
+</html>
